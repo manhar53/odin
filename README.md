@@ -70,3 +70,7 @@ simply stay disabled.
 Personal state — sessions, knowledge, logs, voice models, OAuth tokens and the
 signed-in browser profile used for WhatsApp/Gmail — is written to `data/`, which is
 gitignored and never leaves your machine.
+
+## License
+
+[MIT](LICENSE)
