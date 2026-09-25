@@ -1,0 +1,282 @@
+/* ============================================================
+   HERMOD — corner avatar + mini chat panel.
+   Body is transparent so the pywebview window can be borderless
+   and let only the avatar + panel show as floating UI.
+   ============================================================ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: transparent;
+  color: #e9edff;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  user-select: none;
+  overflow: hidden;
+  cursor: default;
+}
+
+#root {
+  position: fixed;
+  /* Avatar lives bottom-right of the window; the window itself is positioned
+     bottom-right of the screen by HERMOD on launch. The panel slides out
+     to the LEFT, so we anchor the avatar to the right edge. */
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* ============================================================
+   AVATAR
+   ============================================================ */
+#avatar {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  /* The avatar has its own soft shadow + gold ring; window itself is
+     transparent so we look like a floating coin not a square card. */
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.55))
+          drop-shadow(0 0 12px rgba(245, 200, 90, 0.20));
+  transition: transform 180ms cubic-bezier(.2,.7,.3,1);
+}
+#avatar:hover { transform: scale(1.05); }
+#avatar:active { transform: scale(0.95); }
+
+.avatar-ring {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(212, 175, 55, 0.75);
+  box-shadow:
+    inset 0 0 12px rgba(212, 175, 55, 0.25),
+    0 0 16px rgba(120, 180, 255, 0.18);
+  pointer-events: none;
+}
+
+.avatar-img {
+  position: absolute; inset: 3px;
+  border-radius: 50%;
+  /* Drawn sun orb — HERMOD wears the orrery's sun as a badge, no image
+     asset needed. Gold core fading through amber to deep space. */
+  background:
+    radial-gradient(circle at 42% 38%,
+      rgba(255, 244, 200, 0.95) 0%,
+      rgba(245, 200, 90, 0.92) 22%,
+      rgba(200, 140, 40, 0.88) 48%,
+      rgba(90, 50, 30, 0.92) 75%,
+      rgba(14, 10, 24, 0.98) 100%);
+}
+body.speaking .avatar-img {
+  animation: avatarGlow 0.9s ease-in-out infinite;
+}
+@keyframes avatarGlow {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.25) saturate(1.15); }
+}
+
+/* Listening pulse — only visible when body.listening */
+.listen-pulse {
+  position: absolute; inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(120, 220, 255, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  animation: hermodPulse 1.6s ease-out infinite;
+  animation-play-state: paused;
+}
+body.listening .listen-pulse { animation-play-state: running; opacity: 1; }
+body.speaking  .listen-pulse {
+  animation-play-state: running; opacity: 1;
+  border-color: rgba(120, 255, 168, 0.6);
+}
+@keyframes hermodPulse {
+  0%   { transform: scale(0.92); opacity: 0.85; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+body.dragging #avatar { cursor: grabbing; transform: scale(1.08); }
+
+/* ============================================================
+   CHAT PANEL — collapsed by default, slides out on click
+   ============================================================ */
+#panel {
+  /* Order in flex: panel first, avatar second; visually panel is LEFT of avatar */
+  width: 340px;
+  max-height: 460px;
+  padding: 14px 14px 12px 14px;
+  background:
+    linear-gradient(135deg,
+      rgba(40, 90, 200, 0.32) 0%,
+      rgba(20, 60, 140, 0.46) 100%);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(120, 180, 255, 0.32);
+  border-radius: 16px;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 26px rgba(60, 140, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  transform-origin: bottom right;
+  transition: opacity 220ms ease, transform 240ms cubic-bezier(.2,.7,.3,1);
+}
+body.collapsed #panel {
+  opacity: 0;
+  transform: translateX(20px) scale(0.92);
+  pointer-events: none;
+}
+
+.panel-header {
+  display: flex; align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 11px; letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(200, 220, 255, 0.78);
+}
+.panel-header .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #c8a02a;
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.7);
+}
+.panel-header .panel-title { flex: 1; }
+.panel-header button {
+  background: transparent;
+  border: 1px solid rgba(180, 220, 255, 0.25);
+  color: rgba(220, 235, 255, 0.7);
+  width: 22px; height: 22px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  transition: background 150ms;
+}
+.panel-header button:hover {
+  background: rgba(120, 180, 255, 0.15);
+  color: #e9edff;
+}
+
+/* ── Conversation thread ─────────────────────────────────────── */
+.thread {
+  flex: 1;
+  min-height: 96px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px;
+}
+.thread-empty {
+  margin: auto;
+  text-align: center;
+  color: rgba(200, 220, 255, 0.42);
+  font-style: italic;
+  font-size: 12px;
+  padding: 0 16px;
+}
+.thread::-webkit-scrollbar { width: 5px; }
+.thread::-webkit-scrollbar-thumb { background: rgba(120,180,255,0.25); border-radius: 3px; }
+
+.msg {
+  max-width: 84%;
+  padding: 8px 11px;
+  border-radius: 13px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.msg.user {
+  align-self: flex-end;
+  background: rgba(70, 140, 255, 0.30);
+  border: 1px solid rgba(120, 180, 255, 0.30);
+  border-bottom-right-radius: 4px;
+  color: #f0f4ff;
+}
+.msg.odin {
+  align-self: flex-start;
+  background: rgba(12, 22, 44, 0.62);
+  border: 1px solid rgba(120, 180, 255, 0.16);
+  border-bottom-left-radius: 4px;
+  color: #e9edff;
+}
+.msg.attach {
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  opacity: 0.92;
+}
+
+/* Thinking indicator — three breathing dots in an ODIN bubble. */
+.msg.thinking { display: flex; gap: 4px; align-items: center; padding: 11px; }
+.msg.thinking span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(200, 220, 255, 0.7);
+  animation: dotPulse 1.2s ease-in-out infinite;
+}
+.msg.thinking span:nth-child(2) { animation-delay: 0.18s; }
+.msg.thinking span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50%      { opacity: 1;   transform: translateY(-2px); }
+}
+
+/* ── Input row: + attach · text · send ───────────────────────── */
+#inputForm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+#uploadBtn, #sendBtn {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 150ms, border-color 150ms;
+}
+#uploadBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(180, 220, 255, 0.28);
+  color: rgba(220, 235, 255, 0.85);
+  font-weight: 600;
+}
+#uploadBtn:hover { background: rgba(120, 180, 255, 0.18); color: #fff; }
+#inputBox {
+  flex: 1;
+  height: 32px;
+  padding: 0 10px;
+  background: rgba(10, 20, 40, 0.55);
+  border: 1px solid rgba(120, 180, 255, 0.28);
+  border-radius: 9px;
+  color: #f0f4ff;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 150ms;
+}
+#inputBox::placeholder { color: rgba(200, 220, 255, 0.40); }
+#inputBox:focus {
+  border-color: rgba(180, 220, 255, 0.55);
+  background: rgba(15, 28, 56, 0.65);
+}
+#sendBtn {
+  background: rgba(60, 140, 255, 0.26);
+  border: 1px solid rgba(120, 180, 255, 0.38);
+  color: #e9edff;
+  font-size: 15px;
+}
+#sendBtn:hover { background: rgba(80, 160, 255, 0.36); }

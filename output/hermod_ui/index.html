@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ODIN — Hermod</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body class="collapsed">
+
+<!--
+  HERMOD — the corner avatar + chat panel.
+  Two visual states:
+    .collapsed  → just the circular ODIN avatar visible (~72 px)
+    .expanded   → avatar + chat panel sliding out to the left
+
+  The panel is a ChatGPT/Claude-style conversation: user bubbles on the
+  right, ODIN bubbles on the left, a thinking indicator while he works,
+  and a + button that opens a file picker to feed ODIN a document.
+
+  Drag the avatar to reposition (right-click or press-hold). Single
+  left-click toggles the panel.
+-->
+
+<div id="root">
+
+  <!-- Chat panel, LEFT of the avatar so it grows toward screen interior. -->
+  <div id="panel" aria-hidden="true">
+    <div class="panel-header">
+      <span class="dot"></span>
+      <span class="panel-title">ODIN</span>
+      <button id="treeBtn"  title="Open the World Tree" aria-label="Open the World Tree">⛯</button>
+      <button id="closeBtn" title="Collapse" aria-label="Collapse">×</button>
+    </div>
+
+    <div id="thread" class="thread">
+      <div class="thread-empty">Ask ODIN anything, or tap + to share a file.</div>
+    </div>
+
+    <form id="inputForm" autocomplete="off">
+      <button id="uploadBtn" type="button" title="Attach a file" aria-label="Attach a file">+</button>
+      <input id="inputBox" type="text" placeholder="ask ODIN…" aria-label="Ask ODIN" />
+      <button id="sendBtn" type="submit" title="Send" aria-label="Send">↑</button>
+    </form>
+  </div>
+
+  <div id="avatar" title="ODIN">
+    <div class="avatar-ring"></div>
+    <!-- drawn sun orb — HERMOD's badge of the World Tree's heartwood -->
+    <div class="avatar-img"></div>
+    <!-- listening pulse (CSS animation) - hidden by default -->
+    <div class="listen-pulse"></div>
+  </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

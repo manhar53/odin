@@ -1,0 +1,21 @@
+# User state — sessions, knowledge JSONs, voices, models, logs, screenshots,
+# backups. OSIRIS owns data/ snapshots; git versions code only.
+data/
+
+# Python
+__pycache__/
+*.pyc
+
+# Model binaries at repo root
+yolov8n.pt
+
+# Local env / editor
+.env
+.venv/
+
+# transient commit-message scratch file
+_commitmsg.txt
+
+# Personal voice recordings / one-off personal bootstrap
+*.wav
+_bootstrap_prefs.py

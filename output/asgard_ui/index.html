@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ODIN — Asgard</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!--
+  YGGDRASIL — ODIN as the World Tree.
+  Heartwood  = ODIN core (GILGAMESH burns in the trunk; MARDUK is the sap)
+  Branches   = the nine layers — hover for a card, click for the dossier,
+               DROP files/links on them to feed the matching faculty
+  Leaves     = the modules of each layer (click → dossier w/ live skills)
+  Roots      = MEMORY — THOTH, HERMES, NABU drinking from the well below;
+               drop anything here to bury it in the Brain vault
+  Ravens     = HUGIN & MUNIN circling the crown; they dive on input events
+  Aurora     = the sky breathes with ODIN's attention
+
+  Camera: wheel = zoom to cursor, drag = pan, double-click/Esc = reset.
+  "/" opens the command bar (typed commands run the HEIMDALL fast-route
+  pipeline via HERMOD). Everything draws on one canvas at 60fps.
+-->
+
+<canvas id="space" aria-label="ODIN as the world tree: the heartwood is his mind, branches are his faculties, roots are his memory"></canvas>
+
+<!-- Hover card: planet/moon details. Positioned by JS, hidden by default. -->
+<div id="bodyCard" class="hidden" role="status"></div>
+
+<!-- Dossier: per-planet layer panel (left). Modules expand into skills. -->
+<aside id="dossier" class="hidden" aria-label="Layer dossier">
+  <div class="dossier-header">
+    <div>
+      <div id="dossierTitle">Planet</div>
+      <div id="dossierLayer">LAYER</div>
+    </div>
+    <button id="dossierClose" title="Close" aria-label="Close dossier">&times;</button>
+  </div>
+  <div id="dossierPurpose"></div>
+  <div id="dossierBody"></div>
+</aside>
+
+<!-- Command bar: "/" to open, Enter to send through the text pipeline. -->
+<div id="cmdbar" class="hidden">
+  <span class="cmd-sigil" aria-hidden="true"></span>
+  <input id="cmdInput" type="text" placeholder="command ODIN…"
+         aria-label="Command ODIN" autocomplete="off" spellcheck="false" />
+  <span class="cmd-hint">Enter to send · Esc to close</span>
+</div>
+
+<!-- Toast: drop/command feedback (top center) -->
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
+
+<!-- MIND: what ODIN currently holds in working memory (top-left).
+     Updated by ASGARD whenever the last-learned store changes — the
+     visible focus of attention. -->
+<div id="mind" class="hidden" aria-label="ODIN's working memory">
+  <div class="mind-label">in mind</div>
+  <div id="mindTitle"></div>
+  <div id="mindMeta"></div>
+</div>
+
+<!-- Answer panel (bottom-right) -->
+<div id="answer" class="hidden">
+  <div class="answer-header">
+    <span class="answer-title">ODIN</span>
+    <span id="answerState" class="answer-state">speaking</span>
+  </div>
+  <div id="answerText"></div>
+</div>
+
+<!-- Activity ticker + status line (bottom-left) -->
+<div id="ticker" aria-hidden="true"></div>
+<div id="status" class="state-idle">idle</div>
+
+<!-- Hotkey hint (top-right, auto-fades) -->
+<div id="hotkeyHint">
+  click&nbsp;branch&nbsp;=&nbsp;dossier&nbsp;·&nbsp;drop&nbsp;files&nbsp;on&nbsp;the&nbsp;tree&nbsp;·&nbsp;/&nbsp;command&nbsp;·&nbsp;Ctrl+Alt+O&nbsp;phantom&nbsp;·&nbsp;Ctrl+Alt+H&nbsp;hide
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

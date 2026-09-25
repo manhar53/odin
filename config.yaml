@@ -1,0 +1,511 @@
+# ODIN — Omniscient Digital Intelligence Node
+# "The one who saw the deep"
+
+odin:
+  name: ODIN
+  full_form: "Omniscient Digital Intelligence Node"
+  tagline: "The one who saw the deep"
+  # Wake phrases — ONLY used by the legacy "whisper" wake engine (see
+  # heimdall.wake_engine). The default engine is openWakeWord, whose spoken
+  # phrase is set by heimdall.oww_model ("hey jarvis" out of the box) and does
+  # NOT read this list. These remain so that flipping wake_engine back to
+  # "whisper" still works with the old single-syllable "sage" doorbell.
+  wake_phrases:
+    - "hey sage"
+    - "okay sage"
+    - "hi sage"
+    - "sage"
+
+gilgamesh:
+  # Local LLM backend.
+  #   "ollama" — talks to a local Ollama daemon over HTTP. Default; most
+  #              robust at tool-calling on the 1B/3B models.
+  #   "bitnet" — uses Microsoft's BitNet-b1.58-2B-4T via llama-cpp-python.
+  #              No daemon. ~700 MB resident vs ~1.5 GB for llama3.2:1b.
+  #              Run `python setup_bitnet.py install` first.
+  backend: "ollama"
+  bitnet_model_path: "data/models/bitnet/ggml-model-i2_s.gguf"
+  # Smart tool-filter: with ~100 registered skills, llama3.2:1b chokes on the
+  # tool list. Embed each tool's description via HERMES once, rank by cosine
+  # similarity to the user's query, send only the top-K to the LLM. Real
+  # measurable improvement on tool-call success.
+  tool_filter_enabled: true
+  tool_filter_top_k: 12          # how many tools to keep
+  tool_filter_min_skills: 20     # only filter when total tools exceed this (else no-op)
+  # ── existing config below ──
+  # 16 GB laptop config (RAM upgraded — was 8 GB). 3B is the tool-calling
+  # brain again; 1B serves as the fast model for chit-chat/simple turns.
+  # History: on 8 GB, 3B paged to disk under memory pressure (90+ second
+  # stalls) so we ran 1B-only with fast-routes + SARASWATI carrying the load.
+  # If RAM ever drops back to 8 GB, revert to: model="llama3.2:1b", fast_model="", context_window=2048
+  model: "llama3.2:3b"
+  fast_model: "llama3.2:1b"    # cheap model for non-tool turns; 3B handles tool-calling
+  host: "http://localhost:11434"
+  temperature: 0.4             # lower = more deterministic, slightly faster sampling
+  context_window: 3072         # trimmed from 4096 for speed — smaller KV cache = less memory-bandwidth pressure per generated token on this CPU box, and 3072 still holds the system prompt + top-12 filtered tools + several turns of history. Bump back to 4096 only if replies get truncated mid-thought.
+  keep_alive: "30m"            # how long Ollama keeps a model resident after the last request. Bumped from 5m: with 16 GB + OLLAMA_MAX_LOADED_MODELS=1 the brain stays warm across a working session, so back-to-back turns skip the 3-5s cold reload that made ODIN feel sluggish. Drops to disk after 30 min idle.
+  # IMPORTANT for 16GB CPU users: set this env var to make Ollama load only one
+  # model at a time (3B and 1B alternate instead of both staying resident):
+  #   setx OLLAMA_MAX_LOADED_MODELS 1
+  # Then kill the Ollama tray and restart. Trade-off: switching between chat
+  # and tool queries pays a 3-5s reload, but eliminates swap thrash entirely.
+  # Recommended if you ever see "brain stopped responding" stalls.
+
+iris:
+  piper_voice_path: "data/voices/en_GB-alan-medium.onnx"   # older British male — fits ODIN All-Father (run setup_voice.py to swap)
+  piper_voice_hi_path: "data/voices/hi_IN-pratham-medium.onnx"  # Hindi male — auto-picked per sentence when Devanagari detected (python setup_voice.py hi_IN-pratham-medium)
+  sapi_voice: ""        # fallback Windows SAPI voice name (e.g. "David", "Zira") — empty = system default
+  sapi_rate: 185        # SAPI words per minute
+  sapi_volume: 1.0      # SAPI volume (0.0 - 1.0)
+
+vesta:
+  listen_mode: "always"   # "always" = continuous wake-word; "hotkey" = push-to-talk
+  hotkey: "alt"           # global push-to-talk key (used in hotkey mode)
+  show_window: true       # show the ODIN status window at startup (ignored when asgard.enabled — ASGARD owns the UI)
+  start_hidden: false     # when true, the window starts minimized to tray — ideal for "always-on background" usage. Open with tray-menu → Show window, or the hotkey.
+
+hermod:
+  # HERMOD — Norse messenger god, son of Odin. Small corner-avatar window
+  # that appears when an app is in foreground (so the throne room can stay
+  # out of the way). Click avatar to expand a mini chat panel; drag to
+  # reposition (position saved across sessions).
+  enabled: true
+  show_when_app: true                         # show whenever a normal app is focused
+  position_path: "data/knowledge/hermod_position.json"
+
+asgard:
+  # The cosmos UI — YGGDRASIL ORRERY. Always-on-top, frameless full-screen
+  # pywebview window drawing ODIN as a living solar system: sun = ODIN core,
+  # planets = layers (Earth = MEMORY, Jupiter = INTELLIGENCE...), moons =
+  # modules, comets = ENVIRONMENT. Every MARDUK dispatch beams sun → planet.
+  # (The old painted throne-room PNGs remain in asgard_ui/assets, unused.)
+  # Two modes:
+  #
+  #   ACTIVE  — opaque, captures clicks. Default at boot.
+  #   PHANTOM — translucent + click-through. Stays painted on the desktop
+  #             but every click passes through to apps underneath.
+  #
+  # Click anywhere on the throne room → ACTIVE → PHANTOM. Hotkeys bring
+  # ODIN back into ACTIVE (since clicks in PHANTOM go to the desktop).
+  enabled: true
+  # ── Window mode ────────────────────────────────────────────────
+  #   "windowed" (DEFAULT) — ODIN is a NORMAL app window: title bar,
+  #     taskbar entry, alt-tab, minimize, resize. No always-on-top, no
+  #     click-through, no auto-hiding when you focus other apps. Voice
+  #     keeps listening no matter which window has focus (HEIMDALL is
+  #     independent of the UI). Drag-drop and all UI interactions work
+  #     because the window behaves like any other app.
+  #   "overlay" — the legacy living-wallpaper mode: fullscreen, frameless,
+  #     always-on-top, foreground-aware (hides over apps), click → phantom.
+  window_mode: "windowed"
+  window_width: 1200             # windowed mode initial size
+  window_height: 780
+  fullscreen: true               # overlay mode only
+  foreground_aware: true         # overlay mode only — hide over apps; HERMOD covers
+  show_on_speak: true            # overlay mode only — un-hide when ODIN speaks
+  snap_active_on_speak: true     # overlay mode only — auto-flip PHANTOM → ACTIVE
+  hotkey_toggle: "ctrl+alt+o"    # toggle ACTIVE / PHANTOM
+  hotkey_hide:   "ctrl+alt+h"    # toggle SHOW / HIDE entirely
+  phantom_alpha: 90              # 0..255 — opacity in phantom mode (~35%)
+  active_alpha: 255              # 0..255 — opacity in active mode (fully opaque)
+  answer_linger_sec: 3.5         # blue panel stays this long after speaking ends
+  idle_state_delay_sec: 0.4      # grace period before flipping back to 'idle' once IRIS goes quiet
+
+heimdall:
+  # ── Wake engine ──────────────────────────────────────────────────
+  #   "openwakeword" (RECOMMENDED) — a dedicated keyword-spotting neural net,
+  #     the same CLASS of model Siri / Alexa / "Hey Google" use: it runs on
+  #     ~80ms frames and outputs one probability ("is the wake phrase here?"),
+  #     so it's both far faster and far more accurate than transcribing audio
+  #     and string-matching. Fully local, no API key. The catch: it only knows
+  #     its PRETRAINED phrases — pick one below. To get a custom "Hey ODIN" /
+  #     "Sage" model you'd train one with openWakeWord's notebook (a few hours,
+  #     offline) and point oww_model at the resulting .onnx path.
+  #   "whisper" — the legacy path: full Whisper STT on a 2.5s rolling window,
+  #     string-matching wake_phrases. Kept as an automatic fallback if
+  #     openwakeword isn't installed, and for custom phrases like "sage".
+  wake_engine: "openwakeword"
+  oww_model: "hey_jarvis"     # pretrained: hey_jarvis | alexa | hey_mycroft | hey_rhasspy. (Spoken: "hey jarvis".) Or an absolute path to a custom-trained .onnx.
+  oww_threshold: 0.5          # 0..1 — raise toward 0.6-0.7 if it false-wakes, lower toward 0.4 if it misses you.
+  # ── Custom wake phrase ("hey odin") — set wake_engine: "custom" to use ──
+  # Build the model first:  python train_wake_word.py
+  # HONEST NOTE: trained only on ODIN's 2 synthetic Piper voices, the model
+  # rejects impostor phrases well but is borderline on recall and UNVERIFIED
+  # on your real mic. To make "hey odin" genuinely reliable, record ~15-20
+  # clips of yourself saying it into data/wakewords/samples/hey_odin/*.wav
+  # and re-run the trainer. Until then "hey jarvis" (openWakeWord, trained on
+  # thousands of voices) is the dependable default.
+  custom_wake_model: "data/wakewords/hey_odin.pkl"
+  # Two-tier Whisper setup (wake fallback + command transcription):
+  #   wake_model = base.en (74M, ~75MB int8) — small + fast to load (~1s) so
+  #     boot is snappy. Used for the "whisper" wake engine and as the command
+  #     transcriber until the larger stt_model finishes loading.
+  #   stt_model  = small (244M multilingual, ~250MB int8 — same size as
+  #     small.en) — chosen for command accuracy where the user actually says
+  #     full sentences, and multilingual so Hindi commands work. Loaded
+  #     asynchronously in a background thread so it doesn't block boot. If a
+  #     wake fires before stt is ready, HEIMDALL falls back to wake_model for
+  #     that one command (English-only during that window).
+  wake_model: "base.en"
+  stt_model: "small"
+  # Languages HEIMDALL will transcribe commands in. One entry = forced (no
+  # detection overhead). Multiple entries = per-utterance detection via
+  # Whisper's language ID, restricted to this list (full auto-detect across
+  # all 99 languages mis-fires too often on short commands). Hindi absorbs
+  # Whisper's frequent hi→ur mislabel automatically. Hinglish comes out as
+  # mixed Devanagari + English, which llama3.2 handles fine. NOTE: the wake
+  # phrase is fixed (the openWakeWord model, or wake_phrases under the whisper
+  # engine); only the command AFTER the wake can be Hindi. IRIS speaks Hindi
+  # replies too — Devanagari sentences route to the hi_IN piper voice.
+  stt_languages: ["en", "hi"]
+  device: "cpu"
+  compute_type: "int8"
+  sample_rate: 16000
+  input_device:                 # mic — leave blank for system default. Run `python mic_check.py` to list devices, then put an index (e.g. 2) or a name substring (e.g. "Headset") here.
+  energy_threshold: 0.002       # very permissive gate — RMS normalize boosts soft speech afterwards
+  silence_duration: 1.2         # seconds of silence that ends the command recording. Lowered from 2.0 — that long tail was the main "why does it keep listening after I finish" complaint. 1.2s still tolerates a normal mid-sentence breath; _trim_trailing_silence cuts the dead air before Whisper sees it so this only governs how fast recording ENDS, not transcription quality. Tap Alt to end instantly. Raise toward 1.6 only if short questions get cut off.
+  wake_chunk_seconds: 2.5       # bumped from 1.5 — gives Whisper enough context to transcribe 'Hey ODIN' even when the user starts mid-hop
+  wake_hop_seconds: 0.5         # tighter overlap so 'Hey ODIN' is harder to miss
+  vad_aggressiveness: 1         # 0-3; permissive so soft 'hey odin' reaches the wake model
+  noise_reduce: false           # spectral noise gate. Off by default — small.en is robust to room tone and the gate (prop_decrease=0.90) was carving into quiet voice. Set true only if you have a noisy environment AND the model still misses words.
+  debug_audio: true             # dump every wake-buffer transcription to data/debug/wake/ so we can see what Whisper hears
+  # Clap-to-wake — non-verbal trigger that runs in parallel with the wake-word.
+  # Pattern: single | double | triple. Default 'double' = 2 claps within 0.8 s.
+  # Single is too easy to false-trigger (TV, doors, keyboard); triple feels
+  # awkward in practice. Tune peak_threshold / rms_ratio if your environment
+  # is louder/quieter than typical. Increase cooldown_sec if you find echoes
+  # of your own clap retrigger.
+  clap_wake_enabled: true
+  clap_pattern: "double"
+  clap_peak_threshold: 0.18     # absolute peak gate (0-1)
+  clap_rms_ratio: 7.0           # peak / baseline_rms ratio for transient
+  clap_hf_ratio: 0.35           # min fraction of energy above 4 kHz (claps are broadband)
+  clap_cooldown_sec: 1.2        # quiet window after a fired pattern
+
+thoth:
+  max_turns: 20
+  data_path: "data/memory"
+  knowledge_path: "data/knowledge"
+
+chronos:
+  # CHRONOS uses nager.date (free, no key) for holidays, but it doesn't cover
+  # India / many Asian countries. Calendarific does — free 1000 requests/month.
+  # Sign up at calendarific.com → paste key here OR set CALENDARIFIC_API_KEY env.
+  calendarific_api_key: ""
+
+loki:
+  default_mode: "professional"   # professional | casual | witty | serious
+  time_based: true               # shift tone by time of day
+  default_persona: "mythic"      # mythic = Norse All-Father role-play (default) | assistant = factual AI, no role-play
+
+prometheus:
+  preferences_path: "data/knowledge/preferences.json"
+
+saraswati:
+  # Multi-backend cloud research. The user reserves Claude for other work,
+  # so Claude is the LAST option for general queries and the FIRST for code.
+  # Leave any key empty to use the matching env var (preferred for secrets).
+  openai_api_key: ""             # or OPENAI_API_KEY env  (paid; ChatGPT API)
+  anthropic_api_key: ""          # or ANTHROPIC_API_KEY env  (paid; Claude)
+  gemini_api_key: ""             # or GEMINI_API_KEY env  (FREE 1500/day)
+  groq_api_key: ""               # or GROQ_API_KEY env  (FREE, fast Llama-3.3-70b)
+  nvidia_api_key: ""             # or NVIDIA_API_KEY env  (NIM, build.nvidia.com — free credits, OpenAI-compatible)
+  # Models per provider. Override individually if you want a different tier.
+  openai_model: "gpt-4o-mini"
+  claude_model: "claude-opus-4-8"    # Anthropic Opus 4.8 — strong + cheaper than Fable 5 ($5/M in, $25/M out). Fallback chain handles access errors gracefully.
+  gemini_model: "gemini-2.0-flash"
+  groq_model:   "llama-3.3-70b-versatile"
+  # NVIDIA NIM model id — browse build.nvidia.com for the catalog. Other good
+  # picks: "nvidia/llama-3.1-nemotron-70b-instruct" (strong reasoning),
+  # "deepseek-ai/deepseek-r1" (slow but deep). One key serves all of them.
+  nvidia_model: "meta/llama-3.3-70b-instruct"
+  # Escalation ladder (same NVIDIA key, same endpoint): when nvidia_model
+  # returns a refusal / "I don't know" / empty, SARASWATI retries the same
+  # prompt ONCE on this reasoning model with a 4× token budget (R1 thinks
+  # before answering; the <think> trace is stripped). Costs latency only
+  # when the fast model has already failed. Set "" to disable.
+  # (catalog checked 2026-06-11: r1 retired; v4-pro is the deepseek reasoning
+  # flagship. nvidia/nemotron-3-ultra-550b-a55b also available if preferred.)
+  nvidia_reasoning_model: "deepseek-ai/deepseek-v4-pro"
+  # Routing order. Code intent → code_chain. General → general_chain.
+  # Each chain is tried in order; first available provider with quota wins.
+  general_chain: ["openai", "gemini", "groq", "nvidia", "claude"]
+  code_chain:    ["claude", "openai", "nvidia", "gemini", "groq"]
+  # Per-day caps. Lower means more conservative; the user can raise these
+  # when their accounts have higher tier limits.
+  daily_limits:
+    openai: 50
+    gemini: 100
+    groq:   100
+    nvidia: 200       # NIM free credits are generous
+    claude: 30        # kept low — user reserves Claude for other work
+
+ganesh:
+  # GANESH — Hindu scribe, patron of writing and accounting. Excel R/W
+  # via openpyxl. Bare filenames are looked up under Desktop / Documents /
+  # Downloads / G:\My Drive / Brain (2 levels deep). Add extra roots here
+  # if you have a project-specific spreadsheets folder.
+  search_roots: []                  # e.g. ["G:/My Drive/Finance", "~/Spreadsheets"]
+  max_read_cells: 2000              # cap returned cells per read so LLM context stays bounded
+
+wayland:
+  # WAYLAND — autonomous fixer. Consumes VYASA proposals + ad-hoc problem
+  # reports, asks SARASWATI for a code patch, applies it under a strict
+  # safety harness (backup → AST check → import test → smoke test → keep
+  # or auto-revert). Genuinely dangerous; KEEP off until you trust it.
+  #
+  #   auto_apply: false   → propose_fix / apply_fix only via explicit dispatch
+  #   auto_apply: true    → background loop drains VYASA proposals every 2 h
+  #                          (still under safety harness; reverts on failure)
+  #
+  # Hard cap of 5 applies/day across all paths, 1-hour cooldown per file,
+  # and a list of forbidden files (main.py, core/marduk.py, core/gilgamesh.py,
+  # data/secrets/*) that cannot be touched regardless of config.
+  auto_apply: false
+  max_applies_per_day: 5
+  min_gap_per_file_sec: 3600       # 1 h cooldown per file
+  drain_interval_seconds: 7200     # 2 h between background drain passes
+  smoke_skills: ["get_time", "get_brightness"]   # quick read-only checks after each patch
+
+vyasa:
+  # VYASA — Hindu sage who compiled the Vedas. ODIN's self-testing loop.
+  # OFF by default — opt in with voice "start self-test" or marduk.dispatch.
+  # When on, picks past commands (failure replays + success regression checks)
+  # AND generates new ones via SARASWATI, simulates them safely, and asks
+  # cloud for fix proposals. NEVER dispatches state-changing skills (sends,
+  # buys, locks, opens apps); those are logged as 'would-execute' only.
+  interval_seconds: 300            # 5 min between sims; lower = more aggressive
+  max_per_day: 50                  # hard cap so loop can't run away
+  auto_propose_fixes: true         # cloud-call to write a JSON fix proposal on each failure
+  generate_new_every: 5            # cloud-generate fresh commands every N sims
+  session_log_path: "data/logs/vyasa_session.md"
+  proposal_log_path: "data/knowledge/vyasa_proposals.jsonl"
+  generated_cache_path: "data/knowledge/vyasa_generated_commands.json"
+
+mimir:
+  # MIMIR — Odin's beheaded counselor whose wisdom Odin preserved.
+  # Self-diagnostic loop: reads ODIN's own logs and tells you what's broken.
+  fast_route_threshold: 3      # min LLM dispatches before suggesting a fast-route
+  failure_threshold: 2         # min repeats before flagging a recurring failure
+  default_hours: 24            # look-back window for diagnose / propose_fixes
+  auto_apply: false            # off; user reviews proposals before any code change
+
+tyr:
+  # TYR — Norse god of just war + completion. Autonomous goal executor:
+  # plans a real skill chain via cloud LLM, dispatches each step through
+  # MARDUK, reflects until done or step cap. Each step is a real dispatch,
+  # so module-level safety (ARGUS confirms, etc.) still applies.
+  max_steps: 10                # hard cap per goal
+  reflect_every: 3             # how often to ask "are we done yet?"
+  result_char_cap: 800         # trim per-step result before feeding to planner
+  save_to_vault: true          # write goal log to <vault>/goals/<slug>.md
+  confirm_destructive: true    # require 'confirmed' in goal for buy/send/submit/...
+
+chitra:
+  # CHITRA — Hindu scribe-god of eternal records. Bridge to your Google Drive
+  # (5 TB of personal documents, papers, books, photos). Read-only by design.
+  #
+  # ZERO-SETUP MODE (works right now if Google Drive for Desktop is installed):
+  #   CHITRA auto-detects mounts at G:\My Drive, %USERPROFILE%\My Drive, etc.
+  #   No OAuth, no Cloud Console, no API quota. Reads files directly from
+  #   the synced disk. Limitation: Google-native Docs/Sheets/Slides appear
+  #   as .gdoc shortcut files — CHITRA surfaces them in search results and
+  #   gives you the URL, but to read their *content* you need the API path
+  #   below.
+  #
+  # OPTIONAL API MODE (only for Google Docs/Sheets/Slides content):
+  #   1. https://console.cloud.google.com → select project.
+  #   2. APIs & Services → Library → "Google Drive API" → Enable.
+  #   3. APIs & Services → OAuth consent screen → User Type: External, fill
+  #      app name "ODIN" + your email, add yourself under Test Users.
+  #   4. Credentials → Create credentials → OAuth client ID → Desktop app.
+  #      Download JSON → save to data/secrets/google_oauth_credentials.json.
+  #   5. First Drive skill call opens browser; click Allow; done forever.
+  local_mount_path: ""          # leave blank to auto-detect (G:\My Drive etc.); set explicitly to override
+  scope_local_subdir: ""        # restrict CHITRA to a sub-folder of the mount (relative path)
+  credentials_path: "data/secrets/google_oauth_credentials.json"
+  token_path:       "data/secrets/google_oauth_token.json"
+  cache_dir:        "data/knowledge/chitra_cache"
+  max_file_bytes:   5242880     # 5 MB cap per file — skips large videos / archives
+  max_walk_files:   20000       # hard cap on files visited per search — bounds wall time on 5 TB Drives
+  max_content_scan_bytes: 2097152  # 2 MB cap on per-file content scan during search
+  scope_folder_id: ""           # API mode only: restrict to a Drive folder ID
+
+argus:
+  # ARGUS — browser automation via browser-use + Chrome DevTools Protocol.
+  # Drives a real Chrome window using a cloud LLM (Gemini default, Claude
+  # fallback) to plan each step. Chrome is launched on demand; closed when
+  # the task ends — no idle process.
+  headless: false              # show the browser window so the user can watch / abort
+  max_steps: 25                # max LLM steps per browse() before the agent gives up
+  confirm_destructive: true    # require 'confirmed' in the task for buy/send/submit/cancel
+  timeout_seconds: 300         # hard cap per task (5 min default)
+  llm_chain: ["gemini", "claude"]   # which provider drives the browser
+  chrome_path: ""              # leave blank to auto-detect (same logic main.py uses)
+  # Persistent Chrome profile. First time you say "WhatsApp Mom saying...",
+  # the launched Chrome will show WhatsApp Web QR — scan it ONCE with your
+  # phone. Same for Gmail / Instagram. After that the profile remembers and
+  # every future ARGUS run is already signed in. The profile lives at the
+  # path below; delete the folder to fully sign out everywhere.
+  # IMPORTANT: don't point this at your normal Chrome profile — Chrome
+  # refuses to launch with a profile that's already in use.
+  user_data_dir: "data/chrome_profile"
+
+hugin:
+  # HUGIN — Odin's raven of thought. Inbound HTTP webhook gateway: any
+  # service (Zapier, n8n, IFTTT, GitHub Actions, your phone via curl, a
+  # custom Discord/Slack bot, etc.) can POST a JSON message and HUGIN
+  # routes it through the same fast-route pipeline ODIN's voice uses.
+  #
+  # POST http://127.0.0.1:8765/message
+  #   Headers: Authorization: Bearer <hugin.auth_token>, Content-Type: application/json
+  #   Body:    {"text": "weather in Tokyo", "reply_to": "<optional callback url>"}
+  #   Returns: {"status": "ok", "reply": "..."}
+  #
+  # SECURITY: bind_host defaults to 127.0.0.1 — only this machine can reach
+  # HUGIN unless you change it. If you bind to 0.0.0.0, you MUST set an
+  # auth_token; HUGIN will refuse to start otherwise.
+  bind_host: "127.0.0.1"
+  port: 8765
+  auth_token: ""                     # or HUGIN_AUTH_TOKEN env. Required for non-localhost binding.
+  allow_open_local: false            # set true to skip auth on localhost-only mode
+  log_path: "data/logs/hugin.log"
+  max_reply_chars: 4000              # cap reply size returned via callback
+  callback_timeout: 5                # seconds for reply_to POST
+
+narada:
+  # Telegram gateway. Stays dormant unless BOTH telegram_bot_token AND
+  # allowed_user_ids are populated. The allow-list is required — without it,
+  # anyone who guesses the bot's @handle could pipe commands into your laptop.
+  # 1. Make a bot at @BotFather on Telegram → /newbot → paste token here OR
+  #    set TELEGRAM_BOT_TOKEN env var (preferred for secrets).
+  # 2. Get YOUR Telegram user ID from @userinfobot → put it in allowed_user_ids.
+  telegram_bot_token: ""              # or TELEGRAM_BOT_TOKEN env
+  allowed_user_ids: []                # e.g. [123456789]; or TELEGRAM_ALLOWED_IDS env (comma-separated)
+
+athena:
+  # Offline Wikipedia via a Kiwix .zim archive. Download an archive from
+  # https://library.kiwix.org/ — recommended starters:
+  #   wikipedia_en_simple_all_2024-05.zim    ~9 GB    Simple English (good first pick)
+  #   wikipedia_en_all_nopic_2024-05.zim     ~50 GB   Full English, no images
+  # Drop the file anywhere on disk and set the path below. Empty path =
+  # online-only behaviour (live Wikipedia REST API).
+  kiwix_zim_path: ""              # absolute path to a .zim archive (optional)
+  kiwix_first: false              # try .zim BEFORE REST when both are available
+
+akasha:
+  # Free-tier external APIs (not AI; just facts). Each is optional —
+  # AKASHA degrades gracefully when keys are missing.
+  google_search_api_key: ""      # or GOOGLE_SEARCH_API_KEY env. Get a key at console.cloud.google.com (Custom Search API). Free 100/day.
+  google_search_engine_id: ""    # or GOOGLE_SEARCH_CX env. Create a Programmable Search Engine at programmablesearchengine.google.com — copy the CX id.
+  news_api_key: ""               # or NEWS_API_KEY env. Free 100/day at newsapi.org.
+  youtube_api_key: ""            # or YOUTUBE_API_KEY env. Same Google Cloud project as Search; just enable YouTube Data API v3. Free 10,000 units/day.
+  firecrawl_api_key: ""          # or FIRECRAWL_API_KEY env. Free 500/mo at firecrawl.dev — converts pages to clean Markdown. Without it, AKASHA.fetch_page falls back to crawl4ai (local) or a naive HTTP+strip.
+  # Web-scraper preference order. fetch_page walks this list, uses the first
+  # available backend. Defaults to crawl4ai (free, local, no quota) → firecrawl
+  # (paid, slightly faster) → http (offline fallback, lossy on JS pages).
+  # crawl4ai needs Chromium installed once via `python setup_crawl4ai.py install`.
+  scraper_order: ["crawl4ai", "firecrawl", "http"]
+
+stirling:
+  # STIRLING — pure-Python PDF utilities. Skills: pdf_merge, pdf_split,
+  # pdf_to_text, pdf_ocr, pdf_info, pdf_extract_pages. No external server
+  # required — uses pypdf for structure, pdfplumber for text extraction,
+  # pytesseract (already installed for HORUS OCR) for scanned PDFs.
+  # If you ever need the 50+ advanced Stirling-PDF features (digital
+  # signatures, redaction, format-preserving Word/Excel conversion), the
+  # native Windows installer at https://github.com/Stirling-Tools/Stirling-PDF/releases
+  # adds those without re-introducing Docker.
+  output_dir: "data/stirling_out"
+
+horus:
+  # Vision module. Has two parallel paths:
+  #   1. LLaVA via Ollama (describe_screen) — prose descriptions of a scene.
+  #      Slower (~3-5 s) but produces narrative output.
+  #   2. YOLOv8 via ultralytics (detect_objects / count_objects / objects_on_screen)
+  #      — fast (~30 fps CPU) deterministic object listing. ~6 MB model
+  #      auto-downloads on first use, cached in ultralytics' default location.
+  # Use detect_objects for "what's in this image"; describe_screen for prose.
+  vision_model: "llava"            # Ollama vision model (must be pulled separately)
+  yolo_model: "yolov8n.pt"         # nano = fastest, ~6 MB. yolov8s.pt / yolov8m.pt for accuracy.
+  yolo_confidence: 0.30            # minimum confidence floor for listed detections
+
+seshat:
+  # SESHAT — Egyptian goddess of writing and the temple library. The
+  # learn-from-link module: hand ODIN any URL (webpage, GitHub repo, YouTube
+  # video, image, PDF) and it extracts → distills via SARASWATI → saves to
+  # the vault → answers offline forever after. Offline/over-quota: raw
+  # capture is saved + topic queued for SELENE's idle research drain.
+  # YouTube transcripts need: pip install youtube-transcript-api
+  download_dir: "data/seshat"      # where fetched images/PDFs land
+  max_extract_chars: 12000         # cap on content sent to the cloud distiller
+  max_raw_save_chars: 20000        # cap on raw capture saved when offline
+  # learn_file reads local docs (PDF/Word/PowerPoint/text/code). The light
+  # extractors (pdfplumber, python-docx, python-pptx) are instant + offline
+  # and the default. docling adds table/layout/OCR fidelity (great for
+  # scanned PDFs and complex reports) but is heavy — a ~90s cold first call
+  # and large RAM — so it's OFF unless you turn it on here.
+  use_docling: false               # true = high-fidelity docling extraction (needs `pip install docling`)
+
+brihaspati:
+  # BRIHASPATI — Hindu god of wisdom + political counsel. ODIN's geopolitics
+  # mind: aggregates free public news RSS (no AI, no key — allowed offline-
+  # first), and for deep analysis/debate routes through SARASWATI (cloud,
+  # vault-cached, so the same question answers offline next time).
+  #   world_news(category) · geopolitics(topic) · debate(proposition)
+  max_per_feed: 12          # headlines pulled per feed
+  max_items: 40             # total after dedupe/ranking
+  analysis_items: 28        # headlines fed to the cloud model as grounding
+  feed_timeout: 6.0         # seconds per feed before giving up (dead feed is skipped)
+  # feeds:                  # OPTIONAL — override the built-in curated map.
+  #   world: ["http://feeds.bbci.co.uk/news/world/rss.xml", ...]
+  #   geopolitics: [...]
+  #   india: [...]          # categories are freeform; world_news(category) picks one
+
+selene:
+  # Autonomous research drain. SELENE pops one item per interval from the
+  # research queue (populated when ODIN encounters a knowledge gap) and
+  # hands it to SARASWATI.deep_research. Result writes to the vault.
+  auto_research_enabled: true
+  auto_research_interval_seconds: 1800   # 30 min between drains; conservative
+  # Memory Tree — periodic NABU.build_memory_tree pass that summarizes vault
+  # folders bottom-up, mirroring OpenHuman's "Karpathy-style Obsidian wiki"
+  # idea. Stale folders get a fresh _summary.md; unchanged ones are skipped.
+  memory_tree_enabled: true
+  memory_tree_interval_seconds: 3600     # 1 h; each pass is no-op if nothing changed
+  # External-source auto-ingest. CHITRA pulls recent Drive files, MERCURY
+  # pulls recent Gmail messages, each summarized via SARASWATI and dropped
+  # into the vault. 20-min cadence matches OpenHuman's claim. Set false on
+  # either side to opt out individually.
+  ingest_interval_seconds: 1200
+  ingest_drive_enabled: true
+  ingest_gmail_enabled: true
+
+nabu:
+  vault_root: "~/Brain"           # Obsidian vault root — ODIN auto-mirrors chats and caches lookups under <vault>/ODIN/
+  max_index_bytes: 200000              # skip notes larger than this when indexing
+
+osiris:
+  backup_path: "data/backups"
+
+arjun:
+  focus_block_sites: []          # domains to block during focus mode
+
+mercury:
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  sender_email: ""               # set your email
+  sender_password: ""            # set your app password
+
+modules:
+  layers:
+    input:       [heimdall, horus, aether]
+    memory:      [thoth, hermes]
+    intelligence: [athena, prometheus, merlin, seshat]
+    output:      [iris, thor, mercury]
+    personality: [loki, psyche, apollo]
+    management:  [chronos, midas, saint, arjun]
+    environment: [fujin, sindbad]
+    protection:  [karn, enkidu, osiris]
+    utility:     [hephaestus, cassandra, ogma, sherlock]
+    idle:        [selene]

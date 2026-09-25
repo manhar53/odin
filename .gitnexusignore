@@ -1,0 +1,5 @@
+# ODIN's output/ is the OUTPUT layer (IRIS voice, THOR system, MERCURY
+# messaging, ARGUS browser) — real source, not build artifacts. Re-include
+# it past GitNexus's default directory filter (#771-style negation).
+!output/
+!output/**

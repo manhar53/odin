@@ -1,0 +1,477 @@
+/* ============================================================
+   YGGDRASIL ORRERY v2 — chrome styles.
+   The scene lives on <canvas>; DOM is only glass panels and labels.
+   Palette: Void Space — surface #161b22 / accent #58a6ff / gold #ffd17d.
+   Fonts: Segoe UI Variable (Win11 native), Cascadia Mono for data.
+   The pywebview window is created transparent=True — body stays
+   transparent and the canvas paints the void itself, so PHANTOM
+   alpha-dimming keeps working exactly as before.
+   Motion tokens: 180ms enter / 120ms exit, ease-out in, ease-in out.
+   ============================================================ */
+
+:root {
+  --surface: rgba(16, 21, 30, 0.78);
+  --surface-strong: rgba(13, 17, 26, 0.92);
+  --border: rgba(240, 246, 252, 0.10);
+  --border-bright: rgba(120, 180, 255, 0.30);
+  --text: #c9d1d9;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --gold: #ffd17d;
+  --radius: 12px;
+  --blur: blur(18px) saturate(140%);
+  --t-enter: 180ms cubic-bezier(.2,.7,.3,1);
+  --t-exit: 120ms ease-in;
+  --mono: "Cascadia Mono", Consolas, monospace;
+  --sans: "Segoe UI Variable Text", "Segoe UI", sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: var(--sans);
+  color: var(--text);
+  user-select: none;
+  cursor: default;
+}
+
+#space {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* While dragging a file over the window, dim panels so planets pop. */
+body.dragging #answer,
+body.dragging #status,
+body.dragging #ticker,
+body.dragging #dossier { opacity: 0.25; }
+
+/* ── Hover card ──────────────────────────────────────────────── */
+#bodyCard {
+  position: fixed;
+  min-width: 200px;
+  max-width: 280px;
+  background: var(--surface-strong);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 40;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+}
+#bodyCard .card-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #f0f6fc;
+}
+#bodyCard .card-layer {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+#bodyCard .card-moons { color: var(--text-dim); }
+#bodyCard .card-moons b { color: var(--text); font-weight: 600; }
+#bodyCard .card-skill {
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+#bodyCard .card-hint {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--gold);
+  opacity: 0.8;
+}
+
+/* ── Dossier panel (left) ────────────────────────────────────── */
+#dossier {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 320px;
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border-bright);
+  border-radius: 16px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 30px rgba(60, 140, 255, 0.10);
+  z-index: 35;
+  opacity: 1;
+  transition: opacity var(--t-enter), transform var(--t-enter);
+}
+#dossier.hidden {
+  opacity: 0;
+  transform: translateY(-50%) translateX(-16px);
+  pointer-events: none;
+  transition: opacity var(--t-exit), transform var(--t-exit);
+}
+.dossier-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 16px 10px;
+}
+#dossierTitle {
+  font-size: 20px;
+  font-weight: 650;
+  color: #f0f6fc;
+  letter-spacing: 0.3px;
+}
+#dossierLayer {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+#dossierClose {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--t-enter), color var(--t-enter);
+}
+#dossierClose:hover { background: rgba(120, 180, 255, 0.14); color: #f0f6fc; }
+#dossierPurpose {
+  margin: 0 16px 10px;
+  padding: 9px 11px;
+  border: 1px dashed rgba(255, 209, 125, 0.35);
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--gold);
+  background: rgba(255, 209, 125, 0.05);
+}
+#dossierBody {
+  overflow-y: auto;
+  padding: 0 10px 12px;
+}
+#dossierBody::-webkit-scrollbar { width: 7px; }
+#dossierBody::-webkit-scrollbar-thumb { background: rgba(240,246,252,0.14); border-radius: 4px; }
+
+.mod-row {
+  border-radius: 10px;
+  margin: 2px 4px;
+}
+.mod-row.focus { background: rgba(88, 166, 255, 0.08); }
+.mod-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background var(--t-enter);
+}
+.mod-head:hover { background: rgba(120, 180, 255, 0.10); }
+.mod-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+}
+.mod-name {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e6edf3;
+  flex: 1;
+}
+.mod-last {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mod-skills {
+  padding: 2px 10px 8px 27px;
+}
+.mod-skills.hidden { display: none; }
+.mod-skill {
+  font-size: 11.5px;
+  line-height: 1.45;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(240, 246, 252, 0.05);
+}
+.mod-skill:last-child { border-bottom: none; }
+.mod-skill b {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  display: block;
+}
+.mod-skill span { color: var(--text-dim); }
+.mod-skill.dim { color: var(--text-dim); font-style: italic; }
+
+/* ── Command bar ─────────────────────────────────────────────── */
+#cmdbar {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(620px, calc(100vw - 48px));
+  padding: 12px 16px;
+  background: var(--surface-strong);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border-bright);
+  border-radius: 14px;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.6),
+    0 0 36px rgba(60, 140, 255, 0.14);
+  z-index: 50;
+  transition: opacity var(--t-enter), transform var(--t-enter);
+}
+#cmdbar.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
+  pointer-events: none;
+  transition: opacity var(--t-exit), transform var(--t-exit);
+}
+.cmd-sigil {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 10px rgba(255, 209, 125, 0.8);
+  flex-shrink: 0;
+}
+#cmdInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f0f6fc;
+  font-family: var(--sans);
+  font-size: 15px;
+}
+#cmdInput::placeholder { color: var(--text-dim); }
+.cmd-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ── Toast ───────────────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 10px 18px;
+  background: var(--surface-strong);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid rgba(255, 209, 125, 0.35);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gold);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  z-index: 60;
+  transition: opacity var(--t-enter), transform var(--t-enter);
+}
+#toast.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+  pointer-events: none;
+  transition: opacity var(--t-exit), transform var(--t-exit);
+}
+
+/* ── MIND panel: ODIN's visible focus of attention ───────────── */
+#mind {
+  position: fixed;
+  top: 20px;
+  left: 24px;
+  max-width: 300px;
+  padding: 9px 13px;
+  background: var(--surface);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  z-index: 30;
+  transition: opacity var(--t-enter);
+}
+#mind.hidden { opacity: 0; pointer-events: none; }
+.mind-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: rgba(150, 195, 255, 0.75);
+  margin-bottom: 3px;
+}
+#mindTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #e6edf3;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#mindMeta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+#mind.pulse { animation: mindPulse 900ms ease-out; }
+@keyframes mindPulse {
+  0%   { border-color: rgba(190, 215, 255, 0.85); box-shadow: 0 0 22px rgba(120, 180, 255, 0.35); }
+  100% { border-color: var(--border);             box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45); }
+}
+body.phantom #mind { opacity: 0.55; }
+body.dragging #mind { opacity: 0.25; }
+@media (prefers-reduced-motion: reduce) {
+  #mind.pulse { animation: none; }
+}
+
+/* ── Answer panel ────────────────────────────────────────────── */
+#answer {
+  position: fixed;
+  right: 24px;
+  bottom: 56px;
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  background: var(--surface);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  transition: opacity 200ms ease;
+}
+#answer.hidden { opacity: 0; pointer-events: none; }
+.answer-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 14px 0;
+}
+.answer-title { font-weight: 600; font-size: 13px; color: #f0f6fc; }
+.answer-state { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+#answerText {
+  padding: 8px 14px 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  max-height: 38vh;
+  overflow-y: auto;
+}
+#answerText::-webkit-scrollbar { width: 8px; }
+#answerText::-webkit-scrollbar-thumb { background: rgba(240,246,252,0.15); border-radius: 4px; }
+
+/* ── Activity ticker ─────────────────────────────────────────── */
+#ticker {
+  position: fixed;
+  left: 24px;
+  bottom: 48px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 3px;
+  z-index: 29;
+  pointer-events: none;
+}
+#ticker .tick {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: rgba(255, 209, 125, 0.75);
+  transition: opacity 1100ms ease;
+}
+#ticker .tick.fade { opacity: 0; }
+
+/* ── Status line ─────────────────────────────────────────────── */
+#status {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  z-index: 30;
+}
+#status::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: 1px;
+  background: var(--text-dim);
+}
+#status.state-listening::before { background: var(--accent); }
+#status.state-thinking::before  { background: #d29922; }
+#status.state-speaking::before  { background: #ffa657; }
+#status.state-listening, #status.state-thinking, #status.state-speaking { color: var(--text); }
+
+/* ── Hotkey hint ─────────────────────────────────────────────── */
+#hotkeyHint {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  z-index: 30;
+  animation: hintFade 16s ease forwards;
+}
+@keyframes hintFade {
+  0%, 70% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+/* Windowed mode: phantom/hide hotkeys don't apply — a normal window is
+   managed by the taskbar. Hide the overlay-era hint entirely. */
+body.windowed #hotkeyHint { display: none; }
+
+/* Phantom mode: python toggles body.phantom; the webview window alpha does
+   the real dimming — chrome just mutes itself a touch further. */
+body.phantom #answer,
+body.phantom #status,
+body.phantom #ticker,
+body.phantom #bodyCard,
+body.phantom #dossier { opacity: 0.55; }
+
+.hidden { opacity: 0; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  #hotkeyHint { animation: none; opacity: 0.8; }
+  #answer, #dossier, #cmdbar, #toast { transition: none; }
+}

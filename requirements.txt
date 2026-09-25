@@ -1,0 +1,43 @@
+ollama
+faster-whisper
+openwakeword          # Siri-grade keyword-spotting wake engine (heimdall.wake_engine: openwakeword)
+feedparser            # RSS aggregation for BRIHASPATI news/geopolitics module
+indic-nlp-library     # Devanagari normalization for cleaner Hindi TTS (IRIS)
+piper-tts
+pyttsx3
+sounddevice
+numpy
+pygame
+pyyaml
+requests
+ddgs
+beautifulsoup4
+psutil
+pywin32
+pyautogui
+send2trash
+pystray
+Pillow
+keyboard
+pycaw
+pywebview        # ASGARD throne-room UI (uses Edge WebView2 on Win10/11 — no Node, no Chromium bundle)
+# BitNet backend (optional alternative brain for GILGAMESH).
+# Install on demand via `python setup_bitnet.py install` — that script also
+# downloads the BitNet-b1.58-2B-4T model. NOT included in the default install
+# to keep the base footprint small for users who stay on Ollama.
+# llama-cpp-python>=0.3
+# huggingface_hub
+# Submodule-audit additions — all pure-Python pip installs; modules import them
+# lazily and degrade to a clear "install X" message if missing.
+cryptography     # ENKIDU vault encryption (Fernet)
+winotify         # CASSANDRA Windows toast notifications
+pytesseract      # HORUS OCR (also needs tesseract binary on PATH — UB-Mannheim build)
+argostranslate   # OGMA offline translation (run argospm install translate-en_xx after pip)
+langdetect       # OGMA offline language detection (seeded; script-range fallback in ogma.py)
+pyjokes          # LOKI tell_joke — offline jokes library
+anthropic        # SARASWATI Claude path. Optional; set ANTHROPIC_API_KEY env. Reserved for code questions + fallback.
+openai           # SARASWATI ChatGPT path. Optional; set OPENAI_API_KEY env. Primary for general queries.
+google-genai     # SARASWATI Gemini path. Optional; set GEMINI_API_KEY env. Free 1500/day on Google's free tier.
+groq             # SARASWATI Groq path. Optional; set GROQ_API_KEY env. Free, very fast Llama-3.3-70b.
+# ATHENA wiki_lookup uses Wikipedia REST API directly (no pip package needed).
+# AKASHA Google Search / News / YouTube use raw requests against documented endpoints.
